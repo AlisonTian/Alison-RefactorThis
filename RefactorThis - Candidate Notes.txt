@@ -1,0 +1,69 @@
+Here's what I fixed:
+1.	General Problems:
+(1)	Issue: Do not use Dependencies Injection, which causes difficulty to extend and test code. 
+	Approach: I have fixed it by using Microsoft Dependencies Injection
+
+(2)	Issue: ConnectionString is hard code. It will be hard to apply different database in different environments
+	Approach: Store Connection String in appsettings.json (configuration file). We could update the configuration file in build pipeline to fit different environments
+
+(3)	Issue: Project Architecture issue - the project does not have business logic layer(BLL). Model and BLL are mixed, which causes to be hard extensible.
+	Approach: Extract business logic from Model. Then creating a  business logic layer from them in "Services" 
+
+2.	Logic Problems (My personal assumption):
+(1)	Issue: In our cause, although user enter correct Name and Password. However, if the token is expired, the user does not renew API token
+	Approach: Update the logic - When user login successfully, if the token is expired, we will renew API token to give user new Token and renew its expiry time within 2 hours from now. 
+	
+(2)	Issue: I am awared that we have "LastLoggedIn" in Login table. But it does not use in anywhere. 
+	Approach: I added customized ActionFilterAttribute called "RecordLastLoginAttribute" to update LastLoggedIn time, when the resource endpoints are hit. 
+	Also, after an user hit login endpoint successfully, I update the LastLoggedIn time for this user
+
+(3)	Issue: Time zone issue. Currently, we compared API Token Expiry time with machine time zone. It might be an issue, when the machine move to different time zone.
+	Approach: Use UTC Time Zone
+
+3.	API Problems
+(1)	Issue:	All resource are opened without any authentication. 
+	Approach: I add a middleware called "TokenValidationMiddleware" to check if there are a token in Bearer Authentication. If invalid (expired or invalid token), return 401 Unauthorized
+
+(2) Issue: API return value is friendly. Something does not return any http status. 
+	Approach: I add return type is IActionResult in order to return http status 
+
+(3) Issue: Login endpoint use "Get" http reuqest is not a good practice. 
+	Approach: Update it as Post method
+
+(4) Issue: No endpoint interface, such as Swagger
+	Approach: Introduce Swagger with Bearer authorization
+
+(5) Issue: Exception handler in endpoint. 
+	Approach: logging exception details and return bad request rather than throw exception without logging it. 
+	(As it is an exam, in this application, we also expose the error details in API and log it in file, but real world project should not expose them )
+
+(6) Issue: Miss getting single product options endpoint and update product options
+	Approach: Add the two endpoint
+
+(7) Issue: No DTOs in endpoint. Some http request body does not need the parameter. 
+	Approach: Add DTO to fit diferent endpoint
+	
+	
+4.	Database Operations issue
+(1)	Issue: No protect SQL Injection
+	Approach: Introduce EntityFramework to do SQL Operations which is handy to protect SQL injection, Although we also could use SQL Parameter to protect this issue   
+
+(2) Issue: Do not close database connection
+	Approach: Dispose DbContext of EntityFramework. 
+
+(3) Issue: Delete a product should also deleted its product options
+	Approach: Using SQL transaction query to delete a product's options firstly, then delete it. If any error during this operation, it will be rollback the whole transaction
+
+(4)	Issue: Update or insert a product option should check if its product does exist in database
+	Approach: Check product ID in product table, if not exist, return not found in API.
+
+Here's what I would like to talk about at the interview:
+*	Introduce BaseService with Generic type to write query, create, modify, delete method. We donot need duplicate code on that
+*	Introduce Pagination when query all record of a table. Otherwise, once the data is big, it take long time, even time out of SQL query
+*	Introduce Dependencies Injection in order to make the project more extensible and testable
+*	Introduce Swagger to have an interface of endpoints
+*	Introduce sync method for database operation to improve performance
+*	Introduce DTO to get ride of unnecessary parameter
+*	Introduce Serilog to log information or error for this project 
+*	Writing extension code. In our case, we use extension for common method
+*	Add Unit Tests into this project 
